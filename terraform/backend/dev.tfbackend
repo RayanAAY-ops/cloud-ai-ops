@@ -1,0 +1,4 @@
+bucket  = "cloudai-ops-tfstate-dev"
+key     = "terraform.tfstate"
+region  = "eu-west-1"
+encrypt = true

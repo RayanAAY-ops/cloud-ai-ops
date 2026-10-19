@@ -1,0 +1,2 @@
+# No [bedrock] extra: boto3 (used for AWS auth) is already in the Lambda runtime.
+anthropic==1.15.0

@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+.venv/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfplan
+terraform/tfplan
+terraform/build*
+*.tfstate
+*.tfstate.*
+
+# Lambda layer build output
+layer/code/
