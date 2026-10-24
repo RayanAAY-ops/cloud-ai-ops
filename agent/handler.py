@@ -5,7 +5,7 @@ import json
 import incidents
 import tracing
 from claude import investigate
-from config import PR_FUNCTION, lambda_
+from config import APP_FUNCTION, PR_FUNCTION, lambda_
 
 
 def handler(event, context):
@@ -20,7 +20,7 @@ def handler(event, context):
     incident_id = "INC-" + fingerprint[:8]
     evidence = {"alarm": alarm, "main_error": error}
     try:
-        with tracing.incident_trace(incident_id, input=evidence) as trace:
+        with tracing.incident_trace(incident_id, app=APP_FUNCTION, fingerprint=fingerprint, input=evidence) as trace:
             report = investigate(evidence)
             trace.update(output=report)
     except Exception:

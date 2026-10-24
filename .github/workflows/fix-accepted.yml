@@ -1,0 +1,47 @@
+# When an agent PR (branch cloudops-ai/inc-xxxxxxxx) is closed, score its Langfuse
+# trace: fix_accepted = 1 if merged, 0 if closed without merging.
+#
+# Needs two repository secrets (Settings -> Secrets and variables -> Actions):
+#   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY  (same keys as the agent)
+
+name: fix_accepted score
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {} # needs no access to the repository
+
+jobs:
+  score:
+    if: startsWith(github.head_ref, 'cloudops-ai/inc-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send the score to Langfuse
+        # Values from the PR go through env vars, never straight into the script.
+        env:
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: https://cloud.langfuse.com
+          BRANCH: ${{ github.head_ref }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          pip install --quiet langfuse==4.17.0
+          python - <<'EOF'
+          import os
+          from langfuse import Langfuse
+
+          incident_id = "INC-" + os.environ["BRANCH"].removeprefix("cloudops-ai/inc-")
+          merged = os.environ["MERGED"] == "true"
+          langfuse = Langfuse()
+          langfuse.create_score(
+              name="fix_accepted",
+              value=1 if merged else 0,
+              data_type="BOOLEAN",
+              trace_id=langfuse.create_trace_id(seed=incident_id),  # same id the agent used
+              comment=("merged: " if merged else "closed without merging: ") + os.environ["PR_URL"],
+          )
+          langfuse.flush()
+          print(f"{incident_id}: fix_accepted={int(merged)}")
+          EOF

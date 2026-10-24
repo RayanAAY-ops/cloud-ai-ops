@@ -61,9 +61,10 @@ def observe(name, as_type="span", **attributes):
 
 
 @contextmanager
-def incident_trace(incident_id, **attributes):
+def incident_trace(incident_id, app, fingerprint, **attributes):
     """The root of one investigation. The trace id is derived from the incident id,
-    so DynamoDB, the GitHub PR and the trace share the same identifier."""
+    so DynamoDB, the GitHub PR and the trace share the same identifier.
+    `app` is Langfuse's "user": cost and incidents per app in the dashboards."""
     if langfuse is None:
         yield NO_OP
         return
@@ -73,7 +74,9 @@ def incident_trace(incident_id, **attributes):
     with langfuse.start_as_current_observation(
         trace_context={"trace_id": trace_id}, name="investigation", as_type="agent", **attributes
     ) as root:
-        with propagate_attributes(trace_name=incident_id, tags=["cloudops-ai"]):
+        with propagate_attributes(
+            trace_name=incident_id, user_id=app, tags=["cloudops-ai"], metadata={"fingerprint": fingerprint}
+        ):
             yield root
 
 
