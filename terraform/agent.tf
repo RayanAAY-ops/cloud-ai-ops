@@ -30,6 +30,11 @@ module "agent" {
     APP_TABLE_ARN   = aws_dynamodb_table.shop_items.arn
     INCIDENTS_TABLE = aws_dynamodb_table.incidents.name
     PR_FUNCTION     = module.pr.lambda_function_name
+    ENVIRONMENT     = var.environment
+
+    # Tracing (tracing.tf). Disabled automatically while the secret has no value.
+    LANGFUSE_SECRET   = aws_secretsmanager_secret.langfuse.arn
+    LANGFUSE_BASE_URL = var.langfuse_base_url
   }
 
   # Don't re-run a whole investigation if it fails; one alarm = one attempt.

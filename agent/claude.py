@@ -10,6 +10,7 @@ import os
 
 from anthropic import AnthropicBedrockMantle
 
+import tracing
 from config import MODEL_ID
 from tools import TOOLS
 
@@ -61,11 +62,14 @@ def untrusted(data):
 
 
 def run_tool(block):
-    try:
-        function = TOOLS[block.name][0]
-        return {"type": "tool_result", "tool_use_id": block.id, "content": untrusted(function(**block.input))}
-    except Exception as e:
-        return {"type": "tool_result", "tool_use_id": block.id, "content": f"tool error: {e}", "is_error": True}
+    with tracing.observe(block.name, as_type="tool", input=block.input) as step:
+        try:
+            function = TOOLS[block.name][0]
+            result = {"type": "tool_result", "tool_use_id": block.id, "content": untrusted(function(**block.input))}
+        except Exception as e:
+            result = {"type": "tool_result", "tool_use_id": block.id, "content": f"tool error: {e}", "is_error": True}
+        step.update(output=result["content"], level="ERROR" if result.get("is_error") else "DEFAULT")
+        return result
 
 
 def investigate(alarm):
@@ -74,13 +78,19 @@ def investigate(alarm):
     messages = [{"role": "user", "content": "An alarm fired. Alarm and main error:\n" + untrusted(alarm)}]
 
     for _ in range(MAX_CALLS):
-        response = claude.messages.create(
-            model=MODEL_ID,
-            max_tokens=16000,
-            system=SYSTEM,
-            tools=[*tools, SUBMIT_REPORT],
-            messages=messages,
-        )
+        # The input logged is only the newest message: the earlier ones are in the previous steps.
+        with tracing.observe("claude", as_type="generation", model=MODEL_ID, input=messages[-1]) as step:
+            response = claude.messages.create(
+                model=MODEL_ID,
+                max_tokens=16000,
+                system=SYSTEM,
+                tools=[*tools, SUBMIT_REPORT],
+                messages=messages,
+            )
+            step.update(
+                output=response.content,
+                usage_details={"input": response.usage.input_tokens, "output": response.usage.output_tokens},
+            )
         if response.stop_reason == "refusal":
             return None
 

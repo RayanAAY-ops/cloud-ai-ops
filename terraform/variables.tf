@@ -26,6 +26,12 @@ variable "bedrock_model_id" {
   default     = "anthropic.claude-haiku-4-5" # cheapest Claude, open to all Bedrock accounts
 }
 
+variable "langfuse_base_url" {
+  description = "Langfuse region the agent sends traces to (EU by default; US: https://us.cloud.langfuse.com)"
+  type        = string
+  default     = "https://cloud.langfuse.com"
+}
+
 variable "github_repository" {
   description = "owner/repo the PR Lambda opens fix pull requests against"
   type        = string

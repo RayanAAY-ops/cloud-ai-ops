@@ -3,6 +3,7 @@
 import json
 
 import incidents
+import tracing
 from claude import investigate
 from config import PR_FUNCTION, lambda_
 
@@ -16,15 +17,21 @@ def handler(event, context):
         incidents.count_again(fingerprint)
         return {"fingerprint": fingerprint, "status": "duplicate"}
 
+    incident_id = "INC-" + fingerprint[:8]
+    evidence = {"alarm": alarm, "main_error": error}
     try:
-        report = investigate({"alarm": alarm, "main_error": error})
+        with tracing.incident_trace(incident_id, input=evidence) as trace:
+            report = investigate(evidence)
+            trace.update(output=report)
     except Exception:
         incidents.set_status(fingerprint, "FAILED")  # the next alarm will retry
         raise
+    finally:
+        tracing.flush()  # send the trace before Lambda freezes
 
     if report is None:  # Claude gave up: keep a record, no PR
         report = {"summary": "Investigation inconclusive, triage manually."}
-    report["incident_id"] = "INC-" + fingerprint[:8]
+    report["incident_id"] = incident_id
     report["error"] = error  # from the logs, not from the model
     report["requires_human_approval"] = True  # set by code, never by the model
 
