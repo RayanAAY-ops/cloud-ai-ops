@@ -9,13 +9,13 @@ module "agent" {
   function_name = "${local.full_function_name}-agent"
 
   runtime       = "python3.13"
-  handler       = "agent.handler"
+  handler       = "handler.handler"
   architectures = ["arm64"]
 
   memory_size = 512
   timeout     = 300 # an investigation is a few model calls + tool calls
 
-  # Just agent.py; its dependencies come from the layer below.
+  # The agent's .py files; their dependencies come from the layer below.
   source_path = "${path.module}/../agent"
   layers      = [module.agent_layer.lambda_layer_arn]
 
@@ -29,6 +29,7 @@ module "agent" {
     APP_ROLE_ARN    = aws_iam_role.lambda_exec.arn
     APP_TABLE_ARN   = aws_dynamodb_table.shop_items.arn
     INCIDENTS_TABLE = aws_dynamodb_table.incidents.name
+    PR_FUNCTION     = module.pr.lambda_function_name
   }
 
   # Don't re-run a whole investigation if it fails; one alarm = one attempt.
@@ -160,6 +161,13 @@ data "aws_iam_policy_document" "agent" {
     resources = [aws_dynamodb_table.incidents.arn]
   }
 
+  # Hand the report to the PR Lambda (which holds the GitHub token, not the agent).
+  statement {
+    sid       = "RequestPullRequest"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [module.pr.lambda_function_arn]
+  }
+
   statement {
     sid       = "ReadAppLogs"
     actions   = ["logs:FilterLogEvents"]
@@ -170,7 +178,7 @@ data "aws_iam_policy_document" "agent" {
   statement {
     sid = "ReadMetricsAndChanges"
     actions = [
-      "cloudwatch:GetMetricData",
+      "cloudwatch:GetMetricStatistics",
       "cloudtrail:LookupEvents",
     ]
     resources = ["*"]

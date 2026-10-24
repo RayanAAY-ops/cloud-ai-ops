@@ -13,3 +13,5 @@ terraform/build*
 
 # Lambda layer build output
 layer/code/
+
+to_do.md

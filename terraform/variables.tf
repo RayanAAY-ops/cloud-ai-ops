@@ -26,6 +26,18 @@ variable "bedrock_model_id" {
   default     = "anthropic.claude-haiku-4-5" # cheapest Claude, open to all Bedrock accounts
 }
 
+variable "github_repository" {
+  description = "owner/repo the PR Lambda opens fix pull requests against"
+  type        = string
+  default     = "RayanAAY-ops/cloud-ai-ops"
+}
+
+variable "github_base_branch" {
+  description = "Branch the fix pull requests target"
+  type        = string
+  default     = "main"
+}
+
 variable "dynamodb_table_name" {
   description = "Name of the DynamoDB table used by the Lambda (shop-items)"
   type        = string
