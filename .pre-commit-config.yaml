@@ -1,0 +1,16 @@
+# Runs on every `git commit`. Install once with: make setup
+# Run it by hand with:                          make check
+#
+# More hooks to add later (pin them to commit SHAs):
+#   - pre-commit/pre-commit-hooks  whitespace, YAML/JSON, merge conflicts, private keys
+#   - gitleaks/gitleaks            leaked tokens (e.g. github_pat_...)
+#   - antonbabenko/pre-commit-terraform  terraform fmt + validate
+
+repos:
+  # Python lint (with safe auto-fixes) and format. Settings in pyproject.toml.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 44b5042edab9382aba712eed4f9c7bab7a3d6a3e # frozen: v0.17.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

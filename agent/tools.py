@@ -20,9 +20,9 @@ HOUR = 3600
 
 
 def search_logs():
-    '''
+    """
     Filter logs with the flag ERROR.
-    '''
+    """
     events = logs.filter_log_events(
         logGroupName=APP_LOG_GROUP,
         startTime=int((time.time() - HOUR) * 1000),
@@ -32,9 +32,10 @@ def search_logs():
 
 
 def get_metrics():
-    '''
+    """
     Get metrics and statistics around the function, that is for the time being, manually defined.
-    '''
+    """
+
     def total(metric):
         points = cloudwatch.get_metric_statistics(
             Namespace="AWS/Lambda",
@@ -99,8 +100,7 @@ TOOLS = {
     "get_role_policies": (get_role_policies, "IAM policies of the app's role.", NO_INPUT),
     "check_permissions": (
         check_permissions,
-        "IAM simulator: may the app's role perform these actions on a resource "
-        "(default: the app's DynamoDB table)?",
+        "IAM simulator: may the app's role perform these actions on a resource (default: the app's DynamoDB table)?",
         {
             "type": "object",
             "properties": {

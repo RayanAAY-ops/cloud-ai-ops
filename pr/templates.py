@@ -4,7 +4,9 @@
 def safe(text):
     """Model-written text: no HTML, no @mentions, no code fences."""
     text = str(text).strip()
-    return text.replace("<", "&lt;").replace(">", "&gt;").replace("@", "@​").replace("`", "'")
+    return (
+        text.replace("<", "&lt;").replace(">", "&gt;").replace("@", "@\u200b").replace("`", "'")
+    )  # \u200b breaks @mentions
 
 
 def incident_markdown(report):
@@ -12,9 +14,9 @@ def incident_markdown(report):
         f"- **{c.get('confidence', 0):.0%}** {safe(c.get('cause'))}" for c in report.get("likely_causes", [])
     )
     evidence = "\n".join(f"- {safe(e)}" for e in report.get("evidence", []))
-    return f"""# {report['incident_id']}: {safe(report['summary'])}
+    return f"""# {report["incident_id"]}: {safe(report["summary"])}
 
-**Severity:** {report['severity']}
+**Severity:** {report["severity"]}
 
 > Opened automatically by cloudops-ai. This PR only documents the incident:
 > **no code or infrastructure is changed.** Apply the fix yourself, then merge.
@@ -22,12 +24,12 @@ def incident_markdown(report):
 ## 🔴 Error
 
 ```
-{str(report['error']).replace("`", "'")}
+{str(report["error"]).replace("`", "'")}
 ```
 
 ## 💥 Impact
 
-{safe(report['impact'])}
+{safe(report["impact"])}
 
 ## 🔍 Root cause
 
@@ -39,11 +41,11 @@ def incident_markdown(report):
 
 ## 🛠 Proposed fix
 
-{safe(report['proposed_fix'])}
+{safe(report["proposed_fix"])}
 
 ## ❓ Uncertainty
 
-{safe(report.get('uncertainty', 'Not stated.'))}
+{safe(report.get("uncertainty", "Not stated."))}
 
 ## ✅ Checklist
 

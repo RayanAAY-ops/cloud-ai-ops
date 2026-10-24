@@ -6,7 +6,8 @@ import re
 from collections import Counter
 from datetime import UTC, datetime
 
-from config import APP_FUNCTION, incidents_table as table
+from config import APP_FUNCTION
+from config import incidents_table as table
 from tools import search_logs
 
 

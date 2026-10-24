@@ -31,7 +31,9 @@ def handler(event, context):
     if "proposed_fix" in report:
         incidents.set_status(fingerprint, "PR_REQUESTED", report)
         # Only the key is passed: the PR Lambda re-reads the stored report.
-        lambda_.invoke(FunctionName=PR_FUNCTION, InvocationType="Event", Payload=json.dumps({"fingerprint": fingerprint}))
+        lambda_.invoke(
+            FunctionName=PR_FUNCTION, InvocationType="Event", Payload=json.dumps({"fingerprint": fingerprint})
+        )
     else:
         incidents.set_status(fingerprint, "REPORTED", report)
 

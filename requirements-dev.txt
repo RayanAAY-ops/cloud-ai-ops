@@ -1,0 +1,4 @@
+# Local tooling. The Lambdas' runtime dependency is in layer/requirements.txt.
+pre-commit==4.3.0
+anthropic==1.15.0
+boto3==1.43.114

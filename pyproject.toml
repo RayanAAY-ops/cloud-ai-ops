@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/W: style, F: bugs (unused imports, undefined names), I: import order,
+# B: likely bugs, UP: modern Python syntax
+select = ["E", "W", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+# The Lambdas' own modules (they sit side by side in agent/ and pr/)
+known-first-party = ["config", "tools", "claude", "incidents", "handler", "github", "templates"]
