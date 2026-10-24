@@ -1,8 +1,10 @@
-# When an agent PR (branch cloudops-ai/inc-xxxxxxxx) is closed, score its Langfuse
-# trace: fix_accepted = 1 if merged, 0 if closed without merging.
+# When an agent PR (branch cloudops-ai/inc-<16-hex fingerprint>) is closed:
+#   1. score its Langfuse trace: fix_accepted = 1 if merged, 0 if closed without merging
+#   2. update its DynamoDB record: RESOLVED if merged, PR_CLOSED otherwise
 #
-# Needs two repository secrets (Settings -> Secrets and variables -> Actions):
-#   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY  (same keys as the agent)
+# Needs, in Settings -> Secrets and variables -> Actions:
+#   secrets:   LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY
+#   variables: AWS_ROLE_ARN (terraform output github_incidents_role_arn)
 
 name: fix_accepted score
 
@@ -10,29 +12,31 @@ on:
   pull_request:
     types: [closed]
 
-permissions: {} # needs no access to the repository
+permissions:
+  id-token: write # get a short-lived AWS role through OIDC
 
 jobs:
   score:
     if: startsWith(github.head_ref, 'cloudops-ai/inc-')
     runs-on: ubuntu-latest
+    # Values from the PR go through env vars, never straight into the scripts.
+    env:
+      BRANCH: ${{ github.head_ref }}
+      MERGED: ${{ github.event.pull_request.merged }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
     steps:
       - name: Send the score to Langfuse
-        # Values from the PR go through env vars, never straight into the script.
         env:
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_BASE_URL: https://cloud.langfuse.com
-          BRANCH: ${{ github.head_ref }}
-          MERGED: ${{ github.event.pull_request.merged }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
           pip install --quiet langfuse==4.17.0
           python - <<'EOF'
           import os
           from langfuse import Langfuse
 
-          incident_id = "INC-" + os.environ["BRANCH"].removeprefix("cloudops-ai/inc-")
+          incident_id = "INC-" + os.environ["BRANCH"].removeprefix("cloudops-ai/inc-")[:8]
           merged = os.environ["MERGED"] == "true"
           langfuse = Langfuse()
           langfuse.create_score(
@@ -45,3 +49,25 @@ jobs:
           langfuse.flush()
           print(f"{incident_id}: fix_accepted={int(merged)}")
           EOF
+
+      - name: Get AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Update the incident record
+        env:
+          TABLE: cloudops-ai-app-dev-incidents
+        run: |
+          fingerprint="${BRANCH#cloudops-ai/inc-}"  # the branch carries the record's key
+          [[ "$fingerprint" =~ ^[0-9a-f]{16}$ ]] || { echo "Unexpected branch: $BRANCH"; exit 1; }
+          if [ "$MERGED" = "true" ]; then status=RESOLVED; else status=PR_CLOSED; fi
+
+          aws dynamodb update-item --table-name "$TABLE" \
+            --key "{\"fingerprint\": {\"S\": \"$fingerprint\"}}" \
+            --update-expression "SET #s = :s, closed_at = :t" \
+            --condition-expression "attribute_exists(fingerprint)" \
+            --expression-attribute-names '{"#s": "status"}' \
+            --expression-attribute-values "{\":s\": {\"S\": \"$status\"}, \":t\": {\"S\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}"
+          echo "INC-${fingerprint:0:8}: status=$status"

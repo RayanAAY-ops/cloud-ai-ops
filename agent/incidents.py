@@ -27,7 +27,7 @@ def main_error(alarm):
 
 
 def fingerprint_of(error):
-    return hashlib.sha256(f"{APP_FUNCTION}|{error}".encode()).hexdigest()[:16]
+    return hashlib.sha256(f"{APP_FUNCTION}|{error}_err".encode()).hexdigest()[:16]
 
 
 def claim(fingerprint, error):

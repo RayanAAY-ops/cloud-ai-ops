@@ -27,7 +27,8 @@ def handler(event, context):
 
     url = github.open_pull_request(
         token=token["SecretString"].strip(),
-        branch=f"cloudops-ai/{incident_id.lower()}",
+        # Full fingerprint = the DynamoDB key: the PR-closed workflow updates the record without a Scan.
+        branch=f"cloudops-ai/inc-{event['fingerprint']}",
         path=f"incidents/{incident_id.lower()}.md",
         content=write_up,
         title=f"incident {incident_id}: {templates.safe(report['summary'])[:80]}",
