@@ -22,10 +22,16 @@ data "aws_iam_policy_document" "github_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # The repo uses GitHub's immutable subject format (owner and repo ids included):
+    #   gh api repos/<owner>/<repo>/actions/oidc/customization/sub
+    # The plain format is kept in case that setting is turned off.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:pull_request"]
+      values = [
+        "${var.github_oidc_subject_prefix}:pull_request",
+        "repo:${var.github_repository}:pull_request",
+      ]
     }
   }
 }

@@ -38,6 +38,12 @@ variable "github_repository" {
   default     = "RayanAAY-ops/cloud-ai-ops"
 }
 
+variable "github_oidc_subject_prefix" {
+  description = "OIDC subject prefix of the repo (immutable format, with ids): gh api repos/<owner>/<repo>/actions/oidc/customization/sub"
+  type        = string
+  default     = "repo:RayanAAY-ops@55285736/cloud-ai-ops@1426197226"
+}
+
 variable "github_base_branch" {
   description = "Branch the fix pull requests target"
   type        = string

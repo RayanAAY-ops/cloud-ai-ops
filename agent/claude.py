@@ -16,7 +16,8 @@ from tools import TOOLS
 
 MAX_CALLS = 15  # safety cap: a normal investigation needs 2-5 calls
 
-claude = AnthropicBedrockMantle(aws_region=os.environ["AWS_REGION"])
+# The SDK's own OpenTelemetry spans are off: tracing.py already records each call (else it shows twice).
+claude = AnthropicBedrockMantle(aws_region=os.environ["AWS_REGION"], open_telemetry={"traces": {"enabled": False}})
 
 SYSTEM = """You investigate an AWS Lambda incident. Use the read-only tools to \
 gather evidence (logs, metrics, config, IAM, recent changes), confirm your \
@@ -88,6 +89,7 @@ def investigate(alarm):
                 messages=messages,
             )
             step.update(
+                model=response.model,  # e.g. claude-haiku-4-5-20251001: a name Langfuse can price
                 output=response.content,
                 usage_details={"input": response.usage.input_tokens, "output": response.usage.output_tokens},
             )
